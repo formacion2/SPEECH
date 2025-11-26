@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente de Gestión Diners - Cobranza</title>
+    <style>
+        :root {
+            --primary: #004b8d; /* Azul tipo Diners */
+            --secondary: #6c757d;
+            --accent: #00a8e8;
+            --light: #f4f6f9;
+            --success: #28a745;
+            --danger: #dc3545;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Panel Izquierdo: Datos del Cliente */
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        /* Panel Derecho: El Script Dinámico */
+        .main-content {
+            flex: 1;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        #script-display {
+            font-size: 1.5rem; /* Letra grande para leer fácil */
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Resalta las variables en el texto */
+        .variable-highlight {
+            color: var(--primary);
+            font-weight: bold;
+            background-color: #eef6ff;
+            padding: 0 5px;
+            border-radius: 4px;
+        }
+
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-neutral { background-color: var(--secondary); color: white; }
+
+        .restart-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            color: var(--secondary);
+            border: 1px solid #ddd;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            flex: none;
+        }
+
+        .step-indicator {
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            font-size: 0.8rem;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Nota para el asesor */
+        .advisor-note {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>Datos de la Gestión</h3>
+        <div class="input-group">
+            <label>Nombre del Cliente</label>
+            <input type="text" id="clientName" placeholder="Ej. Juan Perez" oninput="updateScript()">
+        </div>
+        <div class="input-group">
+            <label>Fecha Vencimiento</label>
+            <input type="text" id="dueDate" placeholder="Ej. 15 de Octubre" oninput="updateScript()">
+        </div>
+        <div class="input-group">
+            <label>Deuda Total (Factumes)</label>
+            <input type="text" id="totalDebt" placeholder="Ej. S/ 1,500.00" oninput="updateScript()">
+        </div>
+        <div class="input-group">
+            <label>Pago Mínimo</label>
+            <input type="text" id="minPayment" placeholder="Ej. S/ 150.00" oninput="updateScript()">
+        </div>
+        <div class="input-group">
+            <label>Nombre Asesor</label>
+            <input type="text" id="agentName" placeholder="Tu Nombre" value="Ejecutivo" oninput="updateScript()">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <span class="step-indicator" id="stepIndicator">Paso 1: Saludo</span>
+        <button class="restart-btn" onclick="resetScript()">⟳ Nueva Llamada</button>
+        
+        <div id="script-display">
+            </div>
+
+        <div id="advisor-note-container">
+            </div>
+
+        <div class="actions" id="action-buttons">
+            </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE LOS PASOS DEL SCRIPT
+        const scriptSteps = {
+            saludo: {
+                id: 'saludo',
+                title: 'Saludo Inicial',
+                text: "Buenos días/tardes, me comunico con el Sr./Srta. <span class='variable-highlight'>{clientName}</span>.<br><br>Le saluda <span class='variable-highlight'>{agentName}</span>, en nombre de Diners Club.",
+                note: "Confirma que es el titular antes de continuar.",
+                options: [
+                    { label: "✅ Titular Confirmado", nextStep: 'cobrar', class: 'btn-primary' },
+                    { label: "❌ No contesta / Tercero", nextStep: 'fin_tercero', class: 'btn-danger' }
+                ]
+            },
+            cobrar: {
+                id: 'cobrar',
+                title: 'Motivo de Llamada',
+                text: "El motivo de nuestra llamada es para recordarle que su estado de cuenta está próximo a vencer este <span class='variable-highlight'>{dueDate}</span> por un valor de <span class='variable-highlight'>{totalDebt}</span>.<br><br>¿Contamos con su pago para ese día?",
+                note: "",
+                options: [
+                    { label: "👍 Sí, va a pagar", nextStep: 'promesa', class: 'btn-success' },
+                    { label: "👎 No puede pagar", nextStep: 'pago_minimo', class: 'btn-danger' }
+                ]
+            },
+            promesa: {
+                id: 'promesa',
+                title: 'Cierre de Promesa',
+                text: "Conforme, estimado socio, ¿nos confirma que el valor de su compromiso es por <span class='variable-highlight'>{totalDebt}</span>?",
+                note: "Registra la promesa en el sistema.",
+                options: [
+                    { label: "✨ Finalizar con Despedida", nextStep: 'despedida', class: 'btn-primary' }
+                ]
+            },
+            pago_minimo: {
+                id: 'pago_minimo',
+                title: 'Negociación: Pago Mínimo',
+                text: "Entiendo. Recuerde que también puede realizar el pago mínimo de <span class='variable-highlight'>{minPayment}</span> para mantener su tarjeta activa.<br><br>Así mismo le recordamos que puede realizar el pago por el App y Web Diners sin costo, o en Western Union y Kasnet.",
+                note: "Espera la respuesta del cliente.",
+                options: [
+                    { label: "✅ Acepta pagar Mínimo", nextStep: 'despedida', class: 'btn-success' },
+                    { label: "❌ No puede pagar Mínimo", nextStep: 'ofrecer_campana_check', class: 'btn-danger' }
+                ]
+            },
+            ofrecer_campana_check: {
+                id: 'ofrecer_campana_check',
+                title: 'Verificación de Campaña',
+                text: "<i>(Verifique en el sistema si el cliente tiene campaña ALIVIATE o REGULAR disponible)</i>",
+                note: "Este es un paso interno de decisión para ti.",
+                options: [
+                    { label: "Tiene Campaña Disponible", nextStep: 'ofrecer_campana', class: 'btn-primary' },
+                    { label: "NO tiene Campaña", nextStep: 'consecuencia', class: 'btn-neutral' }
+                ]
+            },
+            consecuencia: {
+                id: 'consecuencia',
+                title: 'Manejo de Objeciones',
+                text: "Le recordamos que realizar su pago a tiempo le abre posibilidades de mantener su récord crediticio y calificar para otros créditos futuros.",
+                note: "Intenta generar compromiso de pago nuevamente o cierra.",
+                options: [
+                    { label: "Ir a Despedida", nextStep: 'despedida', class: 'btn-neutral' }
+                ]
+            },
+            ofrecer_campana: {
+                id: 'ofrecer_campana',
+                title: 'Oferta de Reprogramación',
+                text: "¡Aprovecho este momento para comentarle un gran beneficio que tenemos para usted!<br><br>Observo que por campaña puede pagar menos al mes, simplemente trasladando toda la deuda a cuotas con una tasa preferencial. Además, puede prepagar en cualquier momento sin costo.<br><br>¿Desea que lo ayudemos con la simulación?",
+                note: "",
+                options: [
+                    { label: "👍 Sí, le interesa", nextStep: 'simulacion', class: 'btn-success' },
+                    { label: "👎 No le interesa", nextStep: 'negativa_campana', class: 'btn-danger' }
+                ]
+            },
+            simulacion: {
+                id: 'simulacion',
+                title: 'Simulación y Contrato',
+                text: "<i>(Realice la simulación en el mitigador y genere el contrato de voz con el Speech de reprogramación Alíviate o Regular).</i>",
+                note: "Lee el script legal de la campaña específica.",
+                options: [
+                    { label: "✅ Contrato Aceptado", nextStep: 'despedida', class: 'btn-primary' }
+                ]
+            },
+            negativa_campana: {
+                id: 'negativa_campana',
+                title: 'Cierre tras Negativa',
+                text: "De acuerdo, en ese sentido, recuerde que puede realizar el pago de su factura mínima del mes para evitar generar intereses y gastos de mora, además de mantener un buen récord crediticio.",
+                note: "",
+                options: [
+                    { label: "Ir a Despedida", nextStep: 'despedida', class: 'btn-neutral' }
+                ]
+            },
+            despedida: {
+                id: 'despedida',
+                title: 'Despedida Legal',
+                text: "Finalmente, le recordamos que, desde el 9 de setiembre de 2025, y conforme a la normativa vigente, el cobro de su Seguro de Desgravamen se realiza en la moneda de su línea de crédito (dólares), con un tope máximo mensual de USD 6.50.<br><br>👉 Le recordamos revisar siempre su deuda en ambas monedas. Para mayor información comuníquese al (01) 615.1111, opción 2.<br><br>Gracias por su tiempo.",
+                note: "Fin de la gestión. Tipifica la llamada.",
+                options: [
+                    { label: "📞 Terminar Llamada", nextStep: 'saludo', class: 'btn-neutral' } // Vuelve al inicio
+                ]
+            },
+            fin_tercero: {
+                id: 'fin_tercero',
+                title: 'Fin de Gestión',
+                text: "Entiendo, volveremos a intentar contactar al titular en otro momento. Muchas gracias.",
+                note: "Tipificar como no contacto.",
+                options: [
+                    { label: "Reiniciar", nextStep: 'saludo', class: 'btn-neutral' }
+                ]
+            }
+        };
+
+        // ESTADO DE LA APLICACIÓN
+        let currentStepId = 'saludo';
+
+        // FUNCIONES PRINCIPALES
+        function renderStep() {
+            const step = scriptSteps[currentStepId];
+            const name = document.getElementById('clientName').value || "Socio";
+            const date = document.getElementById('dueDate').value || "(Fecha)";
+            const debt = document.getElementById('totalDebt').value || "(Monto)";
+            const minPay = document.getElementById('minPayment').value || "(Mínimo)";
+            const agent = document.getElementById('agentName').value || "su ejecutivo";
+
+            // Reemplazar variables en el texto
+            let processedText = step.text
+                .replace(/{clientName}/g, name)
+                .replace(/{dueDate}/g, date)
+                .replace(/{totalDebt}/g, debt)
+                .replace(/{minPayment}/g, minPay)
+                .replace(/{agentName}/g, agent);
+
+            // Actualizar DOM
+            document.getElementById('script-display').innerHTML = processedText;
+            document.getElementById('stepIndicator').innerText = `Paso: ${step.title}`;
+            
+            // Actualizar Nota
+            const noteContainer = document.getElementById('advisor-note-container');
+            if (step.note) {
+                noteContainer.innerHTML = `<div class="advisor-note">💡 <b>Ojo:</b> ${step.note}</div>`;
+                noteContainer.style.display = 'block';
+            } else {
+                noteContainer.style.display = 'none';
+            }
+
+            // Generar Botones
+            const actionsContainer = document.getElementById('action-buttons');
+            actionsContainer.innerHTML = '';
+            
+            step.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = opt.class;
+                btn.innerText = opt.label;
+                btn.onclick = () => {
+                    currentStepId = opt.nextStep;
+                    renderStep();
+                };
+                actionsContainer.appendChild(btn);
+            });
+        }
+
+        // Detectar cambios en los inputs para actualizar el texto en tiempo real
+        function updateScript() {
+            renderStep();
+        }
+
+        function resetScript() {
+            // Opcional: Limpiar campos
+            // document.getElementById('clientName').value = '';
+            // document.getElementById('totalDebt').value = '';
+            currentStepId = 'saludo';
+            renderStep();
+        }
+
+        // INICIALIZAR
+        renderStep();
+
+    </script>
+</body>
+</html>
